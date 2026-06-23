@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint with ShellCheck
+        if: runner.os == 'Linux'
+        run: shellcheck *.sh tests/*.sh
+
+      - name: Make scripts executable
+        run: chmod +x *.sh tests/run-tests.sh
+
+      - name: Run tests
+        run: ./tests/run-tests.sh
