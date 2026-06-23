@@ -13,14 +13,25 @@
 #
 set -euo pipefail
 
-SCRIPT_NAME="mdgh"
-SOURCE_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/md-to-issues.sh"
+VERSION="1.0.0"
 
-if [[ ! -f "$SOURCE_FILE" ]]; then
-  echo "✗ Could not find md-to-issues.sh next to this installer."
-  echo "  Make sure install.sh and md-to-issues.sh are in the same folder."
-  exit 1
-fi
+echo "→ mdgh installer v$VERSION"
+
+SCRIPT_NAME="mdgh"
+UPDATE_NAME="mdgh-update"
+UNINSTALL_NAME="mdgh-uninstall"
+
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_MAIN="$BASE_DIR/md-to-issues.sh"
+SOURCE_UPDATE="$BASE_DIR/update.sh"
+SOURCE_UNINSTALL="$BASE_DIR/uninstall.sh"
+
+for f in "$SOURCE_MAIN" "$SOURCE_UPDATE" "$SOURCE_UNINSTALL"; do
+  if [[ ! -f "$f" ]]; then
+    echo "✗ Could not find $(basename "$f") next to this installer."
+    exit 1
+  fi
+done
 
 # ─────────────────────────────────────────────────────────────
 # Pick an install location.
@@ -44,20 +55,27 @@ else
   install_dir="$HOME/bin"
 fi
 
-echo "→ Installing to: $install_dir/$SCRIPT_NAME"
+echo "→ Installing to: $install_dir"
 
 mkdir -p "$install_dir"
 
-if $needs_sudo; then
-  echo "  (needs admin password to write to $install_dir)"
-  sudo cp "$SOURCE_FILE" "$install_dir/$SCRIPT_NAME"
-  sudo chmod +x "$install_dir/$SCRIPT_NAME"
-else
-  cp "$SOURCE_FILE" "$install_dir/$SCRIPT_NAME"
-  chmod +x "$install_dir/$SCRIPT_NAME"
-fi
+install_file() {
+  local src="$1"
+  local dst="$2"
+  if $needs_sudo; then
+    sudo cp "$src" "$dst"
+    sudo chmod +x "$dst"
+  else
+    cp "$src" "$dst"
+    chmod +x "$dst"
+  fi
+}
 
-echo "✓ Copied."
+install_file "$SOURCE_MAIN" "$install_dir/$SCRIPT_NAME"
+install_file "$SOURCE_UPDATE" "$install_dir/$UPDATE_NAME"
+install_file "$SOURCE_UNINSTALL" "$install_dir/$UNINSTALL_NAME"
+
+echo "✓ Installed $SCRIPT_NAME, $UPDATE_NAME, and $UNINSTALL_NAME."
 
 # ─────────────────────────────────────────────────────────────
 # Make sure the install dir is actually on PATH.
