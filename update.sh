@@ -16,6 +16,8 @@ set -euo pipefail
 
 VERSION="1.0.0"
 
+echo "→ mdgh updater v$VERSION"
+
 SCRIPT_NAME="mdgh"
 
 # Raw URL to the latest md-to-issues.sh on the main branch.

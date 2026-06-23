@@ -15,6 +15,8 @@ set -euo pipefail
 
 VERSION="1.0.0"
 
+echo "→ mdgh installer v$VERSION"
+
 SCRIPT_NAME="mdgh"
 UPDATE_NAME="mdgh-update"
 UNINSTALL_NAME="mdgh-uninstall"

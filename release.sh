@@ -7,7 +7,7 @@
 #
 set -euo pipefail
 
-VERSION=$(cat VERSION | tr -d '[:space:]')
+VERSION=$(tr -d '[:space:]' < VERSION)
 TAG="v$VERSION"
 
 echo "→ Preparing release $TAG"
