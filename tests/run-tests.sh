@@ -60,14 +60,12 @@ assert_contains "$output" "title: Setup database schema" "Task 2 title parsed"
 assert_contains "$output" "title: Write documentation" "Task 3 title parsed"
 assert_contains "$output" "**Files:** \`src/components/Login.tsx\`" "Metadata 'Files' parsed"
 assert_contains "$output" "**Depends on:** Backend API" "Metadata 'Depends on' parsed"
-assert_contains "$output" "label: ui" "Default label (lowercased tag) works"
+assert_contains "$output" "labels: UI" "Labels (case-preserved tag) works"
 
-# Test 3: Label mapping
-echo "Test 3: Label mapping"
-output=$($SCRIPT "$SAMPLES/valid-tasks.md" --dry-run --label-map "$SAMPLES/label-map.json")
-assert_contains "$output" "label: frontend" "Label UI mapped to frontend"
-assert_contains "$output" "label: backend" "Label DATA mapped to backend"
-assert_contains "$output" "label: (none)" "Tag DOC (not in map) has no label"
+# Test 3: Multiple labels
+echo "Test 3: Multiple labels"
+output=$($SCRIPT "$SAMPLES/multiple-labels.md" --dry-run)
+assert_contains "$output" "labels: UI, FE" "Multiple labels parsed correctly"
 
 # Test 4: Prefix tag
 echo "Test 4: Prefix tag flag"
