@@ -14,11 +14,13 @@
 #
 set -euo pipefail
 
+VERSION="1.0.0"
+
 SCRIPT_NAME="mdgh"
 
 # Raw URL to the latest md-to-issues.sh on the main branch.
-# Update <your-username> once you've pushed the repo to GitHub.
-REPO_URL="https://raw.githubusercontent.com/<your-username>/md-to-gh-issues/main/md-to-issues.sh"
+REPO_URL="https://raw.githubusercontent.com/DavidKaczmarek92/mdgh/main/md-to-issues.sh"
+VERSION_URL="https://raw.githubusercontent.com/DavidKaczmarek92/mdgh/main/VERSION"
 
 # ─────────────────────────────────────────────────────────────
 # Find where mdgh is currently installed.
@@ -35,14 +37,37 @@ fi
 echo "→ Found $SCRIPT_NAME at: $current_path"
 
 # ─────────────────────────────────────────────────────────────
+# Check for updates by comparing versions.
+# ─────────────────────────────────────────────────────────────
+
+local_version=$("$current_path" --version | awk '{print $2}' | sed 's/^v//')
+echo "→ Local version:  $local_version"
+
+remote_version=""
+if command -v curl >/dev/null 2>&1; then
+  remote_version=$(curl -fsSL "$VERSION_URL" | tr -d '[:space:]')
+elif command -v wget >/dev/null 2>&1; then
+  remote_version=$(wget -qO- "$VERSION_URL" | tr -d '[:space:]')
+fi
+
+if [[ -n "$remote_version" ]]; then
+  echo "→ Remote version: $remote_version"
+  if [[ "$local_version" == "$remote_version" ]]; then
+    echo "✓ Already up to date ($local_version)."
+    exit 0
+  fi
+  echo "→ New version available! Downloading..."
+else
+  echo "→ Checking for updates..."
+fi
+
+# ─────────────────────────────────────────────────────────────
 # Download the latest version to a temp file first, so a failed
 # download never leaves you with a half-written, broken script.
 # ─────────────────────────────────────────────────────────────
 
 tmp_file="$(mktemp)"
 trap 'rm -f "$tmp_file"' EXIT
-
-echo "→ Downloading latest version..."
 
 if command -v curl >/dev/null 2>&1; then
   curl -fsSL "$REPO_URL" -o "$tmp_file"

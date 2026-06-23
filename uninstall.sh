@@ -6,7 +6,11 @@
 #
 set -euo pipefail
 
+VERSION="1.0.0"
+
 SCRIPT_NAME="mdgh"
+UPDATE_NAME="mdgh-update"
+UNINSTALL_NAME="mdgh-uninstall"
 
 # ─────────────────────────────────────────────────────────────
 # Find where mdgh is currently installed.
@@ -22,19 +26,27 @@ fi
 echo "→ Found $SCRIPT_NAME at: $current_path"
 
 # ─────────────────────────────────────────────────────────────
-# Remove the binary.
+# Remove the binaries.
 # ─────────────────────────────────────────────────────────────
 
 install_dir="$(dirname "$current_path")"
 
-if [[ -w "$current_path" ]]; then
-  rm "$current_path"
-else
-  echo "  (needs admin password to remove from $install_dir)"
-  sudo rm "$current_path"
-fi
+remove_file() {
+  local name="$1"
+  local path="${install_dir}/${name}"
+  if [[ -f "$path" ]]; then
+    if [[ -w "$path" ]]; then
+      rm "$path"
+    else
+      sudo rm "$path"
+    fi
+    echo "✓ Removed $name"
+  fi
+}
 
-echo "✓ Removed $SCRIPT_NAME binary."
+remove_file "$SCRIPT_NAME"
+remove_file "$UPDATE_NAME"
+remove_file "$UNINSTALL_NAME"
 
 # ─────────────────────────────────────────────────────────────
 # Inform about PATH changes.

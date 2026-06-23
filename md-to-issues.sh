@@ -68,6 +68,8 @@
 #
 set -euo pipefail
 
+VERSION="1.0.0"
+
 # ─────────────────────────────────────────────────────────────
 # Arg parsing
 # ─────────────────────────────────────────────────────────────
@@ -146,6 +148,10 @@ case "$1" in
     usage
     exit 0
     ;;
+  --version)
+    echo "mdgh v$VERSION"
+    exit 0
+    ;;
 esac
 
 MD_FILE="$1"
@@ -172,6 +178,10 @@ while [[ $# -gt 0 ]]; do
     --prefix-tag)
       PREFIX_TAG=true
       shift
+      ;;
+    --version)
+      echo "mdgh v$VERSION"
+      exit 0
       ;;
     -h|--help)
       usage
