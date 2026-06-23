@@ -81,22 +81,41 @@ assert_contains "$output" 'CREATE TABLE users' "Code block content preserved"
 
 # Test 6: Error handling - Missing file
 echo "Test 6: Error handling (Missing file)"
-if $SCRIPT "non-existent.md" 2>&1 | grep -q "File not found" || [ $? -eq 1 ]; then
-  # We expect the script to fail, so we check if it printed the right error
-  # and that grep found it. The || [ $? -eq 1 ] is because grep -q 
-  # returns 0 on match.
-  # Actually, let's just do it simpler:
-  err_output=$($SCRIPT "non-existent.md" 2>&1 || true)
-  if echo "$err_output" | grep -q "File not found"; then
-    echo -e "  ${GREEN}✓${NC} Handles missing file correctly"
-    passed=$((passed + 1))
-  else
-    echo -e "  ${RED}✗${NC} Fails to handle missing file"
-    failed=$((failed + 1))
-  fi
+err_output=$($SCRIPT "non-existent.md" 2>&1 || true)
+if echo "$err_output" | grep -q "File not found"; then
+  echo -e "  ${GREEN}✓${NC} Handles missing file correctly"
+  passed=$((passed + 1))
 else
-  echo -e "  ${RED}✗${NC} Unexpected failure in test logic"
+  echo -e "  ${RED}✗${NC} Fails to handle missing file"
   failed=$((failed + 1))
+fi
+
+# Test 7: Validation - Valid file
+echo "Test 7: Validation (Valid file)"
+if output=$($SCRIPT "$SAMPLES/valid-tasks.md" --validate 2>&1); then
+  echo -e "  ${GREEN}✓${NC} Validation passes for valid file"
+  passed=$((passed + 1))
+else
+  echo -e "  ${RED}✗${NC} Validation failed for valid file"
+  echo "$output"
+  failed=$((failed + 1))
+fi
+
+# Test 8: Validation - Invalid file
+echo "Test 8: Validation (Invalid file)"
+if output=$($SCRIPT "$SAMPLES/invalid-tasks.md" --validate 2>&1); then
+  echo -e "  ${RED}✗${NC} Validation unexpectedly passed for invalid file"
+  failed=$((failed + 1))
+else
+  echo -e "  ${GREEN}✓${NC} Validation correctly failed for invalid file"
+  assert_contains "$output" "Line 5: ✗ Wrong heading level" "Detected Level 2 heading"
+  assert_contains "$output" "Line 8: ✗ Missing tag" "Detected missing tag"
+  assert_contains "$output" "Line 11: ✗ Empty tag" "Detected empty tag"
+  assert_contains "$output" "Line 14: ✗ Invalid characters in tag" "Detected invalid tag characters"
+  assert_contains "$output" "Line 17: ✗ Wrong heading level" "Detected Level 4 heading"
+  assert_contains "$output" "Line 23: ✗ Wrong heading level" "Detected another Level 2 heading"
+  assert_contains "$output" "Validation failed: Found 6 error(s)" "Reported correct number of errors"
+  passed=$((passed + 1))
 fi
 
 echo ""
