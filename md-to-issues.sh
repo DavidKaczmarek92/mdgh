@@ -330,7 +330,7 @@ for i in $(seq 1 "$task_index"); do
     echo "  title: $title"
     echo "  label: ${label:-(none)}"
     echo "  body:"
-    echo "$body" | sed 's/^/    /'
+    printf '    %s\n' "${body//$'\n'/$'\n'    }"
   else
     label_args=()
     if [[ -n "$label" ]]; then
