@@ -46,23 +46,16 @@
 #   # Validation
 #   ./md-to-issues.sh TASKS.md --validate
 #
-#   # For real, with a label map
-#   ./md-to-issues.sh TASKS.md --repo owner/repo --label-map labels.json
+#   # For real
+#   ./md-to-issues.sh TASKS.md --repo owner/repo
 #
 #   # Run from inside the target repo — --repo can be omitted
-#   cd ~/code/devlog && /path/to/md-to-issues.sh TASKS.md --label-map labels.json
+#   cd ~/code/devlog && /path/to/md-to-issues.sh TASKS.md
 #
-# label-map JSON format (maps the [TAG] found in headings to your repo's
-# actual label name — every repo names labels differently):
+# Multiple labels can be specified in the brackets, separated by commas:
+#   ### [UI, FE] Task title
 #
-#   {
-#     "UI": "FE",
-#     "DATA": "rust"
-#   }
-#
-# Without --label-map, the tag is lowercased and used as-is (e.g. [UI] -> "ui").
-# If a label map IS given but a tag isn't in it, that issue is created
-# with no label rather than guessing a label that might not exist on the repo.
+# The tag is used directly as the label, preserving case (e.g. [UI] -> "UI").
 #
 # Requires: gh CLI installed and authenticated (gh auth login).
 #
@@ -104,11 +97,12 @@ validate_tasks() {
       # If it has a tag, check its format
       if [[ "$content" =~ ^\[(.*)\] ]]; then
         local tag="${BASH_REMATCH[1]}"
+        local tag_re='^[A-Za-z0-9_, -]+$'
         if [[ -z "$tag" ]]; then
           echo "Line $line_num: ✗ Empty tag in Level 3 heading." >&2
           errors=$((errors + 1))
-        elif [[ ! "$tag" =~ ^[A-Za-z0-9_-]+$ ]]; then
-          echo "Line $line_num: ✗ Invalid characters in tag: [$tag]. Use only A-Z, 0-9, _, -." >&2
+        elif [[ ! "$tag" =~ $tag_re ]]; then
+          echo "Line $line_num: ✗ Invalid characters in tag: [$tag]. Use only A-Z, 0-9, _, -, comma, and space." >&2
           errors=$((errors + 1))
         fi
       else
@@ -129,7 +123,6 @@ validate_tasks() {
 
 MD_FILE=""
 REPO=""
-LABEL_MAP_FILE=""
 DRY_RUN=false
 VALIDATE_ONLY=false
 PREFIX_TAG=false
@@ -161,10 +154,6 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --repo)
       REPO="$2"
-      shift 2
-      ;;
-    --label-map)
-      LABEL_MAP_FILE="$2"
       shift 2
       ;;
     --dry-run)
@@ -216,30 +205,13 @@ if [[ -n "$REPO" ]]; then
 fi
 
 # ─────────────────────────────────────────────────────────────
-# Label map lookup
+# Label resolution
 #
-# Pure-bash JSON read for a flat {"TAG": "label"} file — avoids a jq
-# dependency. Falls back to no label if the map or key is missing.
+# Returns the tag as-is, preserving case.
 # ─────────────────────────────────────────────────────────────
 
 resolve_label() {
-  local tag="$1"
-  local lower_tag
-  lower_tag=$(echo "$tag" | tr '[:upper:]' '[:lower:]')
-
-  if [[ -z "$LABEL_MAP_FILE" ]]; then
-    echo "$lower_tag"
-    return
-  fi
-
-  # Extract value for "TAG": "value" — case-insensitive key match,
-  # tolerant of whitespace. Returns empty string if not found.
-  local value
-  value=$(grep -ioE "\"${tag}\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$LABEL_MAP_FILE" \
-    | head -1 \
-    | sed -E 's/^"[^"]*"[[:space:]]*:[[:space:]]*"([^"]*)"$/\1/')
-
-  echo "$value"
+  echo "$1"
 }
 
 # ─────────────────────────────────────────────────────────────
@@ -308,7 +280,8 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   fi
 
   # New task heading: "### [TAG] Title"
-  if [[ "$line" =~ ^###[[:space:]]+\[([A-Za-z0-9_-]+)\][[:space:]]+(.+)$ ]]; then
+  task_re='^###[[:space:]]+\[([A-Za-z0-9_, -]+)\][[:space:]]+(.+)$'
+  if [[ "$line" =~ $task_re ]]; then
     flush_task
     current_tag="${BASH_REMATCH[1]}"
     current_title="${BASH_REMATCH[2]%% }"
@@ -404,13 +377,22 @@ for i in $(seq 1 "$task_index"); do
     echo "────────────────────────────────────────────────────────"
     echo "[DRY RUN] would create issue:"
     echo "  title: $title"
-    echo "  label: ${label:-(none)}"
+    echo "  labels: ${label:-(none)}"
     echo "  body:"
     printf '    %s\n' "${body//$'\n'/$'\n'    }"
   else
     label_args=()
     if [[ -n "$label" ]]; then
-      label_args=(--label "$label")
+      # Split by comma and trim each label
+      IFS=',' read -ra ADDR <<< "$label"
+      for l in "${ADDR[@]}"; do
+        # trim whitespace
+        l="${l#"${l%%[![:space:]]*}"}"
+        l="${l%"${l##*[![:space:]]}"}"
+        if [[ -n "$l" ]]; then
+          label_args+=(--label "$l")
+        fi
+      done
     fi
 
     if output=$(gh issue create --title "$title" --body "$body" "${label_args[@]}" "${REPO_FLAG[@]}" 2>&1); then

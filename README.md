@@ -47,14 +47,13 @@ The installer will copy the scripts to your PATH as:
 Create GitHub issues from a Markdown file:
 
 ```bash
-mdgh TASKS.md --repo owner/repo --label-map labels.json
+mdgh TASKS.md --repo owner/repo
 ```
 
 ### Options
 
 - `MD_FILE`: The first argument is the path to your Markdown file.
 - `--repo owner/repo`: Target GitHub repository. Optional if run inside a git repo.
-- `--label-map labels.json`: Path to a JSON file mapping tags to GitHub labels.
 - `--dry-run`: Preview what issues would be created without actually creating them.
 - `--validate`: Check the Markdown file for formatting errors without creating issues.
 - `--prefix-tag`: Prepend the tag to the issue title (e.g., `[UI] Title`).
@@ -63,10 +62,10 @@ mdgh TASKS.md --repo owner/repo --label-map labels.json
 
 ### Markdown Format
 
-Tasks must start with a level-3 heading containing a tag:
+Tasks must start with a level-3 heading containing one or more tags in brackets. These tags are used directly as GitHub labels (case-preserved).
 
 ```markdown
-### [TAG] Task title here
+### [UI, FE] Task title here
 **Files:** `path/to/file.tsx`
 **Depends on:** Some other task title
 
@@ -76,6 +75,8 @@ Free text description here.
 - [ ] First criterion
 - [ ] Second criterion
 ```
+
+Multiple labels can be specified within the brackets, separated by commas (e.g., `[UI, FE]`).
 
 ## Updating & Uninstalling
 
