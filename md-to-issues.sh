@@ -43,6 +43,9 @@
 #   # Dry run first (recommended) — prints what would be created
 #   ./md-to-issues.sh TASKS.md --dry-run
 #
+#   # Validation
+#   ./md-to-issues.sh TASKS.md --validate
+#
 #   # For real, with a label map
 #   ./md-to-issues.sh TASKS.md --repo owner/repo --label-map labels.json
 #
@@ -69,10 +72,64 @@ set -euo pipefail
 # Arg parsing
 # ─────────────────────────────────────────────────────────────
 
+validate_tasks() {
+  local file="$1"
+  local errors=0
+  local line_num=0
+  local in_code=false
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line_num=$((line_num + 1))
+    trimmed="${line#"${line%%[![:space:]]*}"}"
+
+    # Track fenced code blocks.
+    if [[ "$trimmed" == '```'* ]]; then
+      if $in_code; then in_code=false; else in_code=true; fi
+      continue
+    fi
+    $in_code && continue
+
+    # 1. Catch headings with tags that are NOT level 3
+    if [[ "$line" =~ ^(#|##|####+)[[:space:]]+\[.*\].*$ ]]; then
+      echo "Line $line_num: ✗ Wrong heading level. Tasks must be Level 3 (###)." >&2
+      errors=$((errors + 1))
+    fi
+
+    # 2. Check Level 3 headings
+    if [[ "$line" =~ ^###[[:space:]]+(.*)$ ]]; then
+      local content="${BASH_REMATCH[1]}"
+      
+      # If it has a tag, check its format
+      if [[ "$content" =~ ^\[(.*)\] ]]; then
+        local tag="${BASH_REMATCH[1]}"
+        if [[ -z "$tag" ]]; then
+          echo "Line $line_num: ✗ Empty tag in Level 3 heading." >&2
+          errors=$((errors + 1))
+        elif [[ ! "$tag" =~ ^[A-Za-z0-9_-]+$ ]]; then
+          echo "Line $line_num: ✗ Invalid characters in tag: [$tag]. Use only A-Z, 0-9, _, -." >&2
+          errors=$((errors + 1))
+        fi
+      else
+        # No tag at all
+        echo "Line $line_num: ✗ Missing tag in Level 3 heading (expected '### [TAG] Title')." >&2
+        errors=$((errors + 1))
+      fi
+    fi
+  done < "$file"
+
+  if [[ $errors -gt 0 ]]; then
+    echo "Validation failed: Found $errors error(s)." >&2
+    return 1
+  fi
+  echo "✓ Validation passed!"
+  return 0
+}
+
 MD_FILE=""
 REPO=""
 LABEL_MAP_FILE=""
 DRY_RUN=false
+VALIDATE_ONLY=false
 PREFIX_TAG=false
 
 usage() {
@@ -108,6 +165,10 @@ while [[ $# -gt 0 ]]; do
       DRY_RUN=true
       shift
       ;;
+    --validate)
+      VALIDATE_ONLY=true
+      shift
+      ;;
     --prefix-tag)
       PREFIX_TAG=true
       shift
@@ -129,9 +190,14 @@ if [[ ! -f "$MD_FILE" ]]; then
   exit 1
 fi
 
-if ! $DRY_RUN && ! command -v gh >/dev/null 2>&1; then
+if ! $DRY_RUN && ! $VALIDATE_ONLY && ! command -v gh >/dev/null 2>&1; then
   echo "✗ gh CLI not found. Install it first: https://cli.github.com"
   exit 1
+fi
+
+if $VALIDATE_ONLY; then
+  validate_tasks "$MD_FILE"
+  exit $?
 fi
 
 REPO_FLAG=()

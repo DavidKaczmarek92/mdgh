@@ -14,7 +14,9 @@ labels.json
 !TASKS_TEMPLATE.md
 !tests/samples/*.md
 !.junie/**/*.md
-.junie/plans/
 
 # Logs
 *.log
+
+# Junie plans
+.junie/plans/
