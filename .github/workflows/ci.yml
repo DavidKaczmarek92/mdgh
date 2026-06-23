@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -16,6 +16,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Lint with ShellCheck
+        if: runner.os == 'Linux'
+        run: shellcheck *.sh tests/*.sh
 
       - name: Make scripts executable
         run: chmod +x *.sh tests/run-tests.sh

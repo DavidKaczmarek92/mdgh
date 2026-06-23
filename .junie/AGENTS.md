@@ -28,8 +28,9 @@ Description and details here.
 The script expects level-3 headings starting with a tag in brackets.
 
 ## CI/CD
-- **GitHub Actions**: Automated tests run on every push and pull request to the `main` branch.
+- **GitHub Actions**: Automated tests run on every push to the `main` branch and on all pull requests.
 - **Environments**: Tests are executed on both `ubuntu-latest` and `macos-latest` to ensure cross-platform compatibility.
+- **Linting**: ShellCheck is used on Linux runners to ensure Bash best practices.
 
 ## Important TODOs
 - **Update REPO_URL**: The `REPO_URL` in `update.sh` currently contains a placeholder `<your-username>`. This must be updated to the actual repository URL once the project is pushed to GitHub.
